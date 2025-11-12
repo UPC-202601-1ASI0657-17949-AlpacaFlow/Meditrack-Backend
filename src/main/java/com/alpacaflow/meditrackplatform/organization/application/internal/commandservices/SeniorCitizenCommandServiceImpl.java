@@ -1,10 +1,15 @@
 package com.alpacaflow.meditrackplatform.organization.application.internal.commandservices;
 
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Caregiver;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.SeniorCitizen;
 import com.alpacaflow.meditrackplatform.organization.domain.model.commands.*;
+import com.alpacaflow.meditrackplatform.organization.domain.model.entities.CaregiverAssignment;
 import com.alpacaflow.meditrackplatform.organization.domain.model.entities.DoctorAssignment;
 import com.alpacaflow.meditrackplatform.organization.domain.services.SeniorCitizenCommandService;
+import com.alpacaflow.meditrackplatform.organization.infrastructure.persistence.jpa.repositories.CaregiverAssignmentRepository;
+import com.alpacaflow.meditrackplatform.organization.infrastructure.persistence.jpa.repositories.CaregiverRepository;
 import com.alpacaflow.meditrackplatform.organization.infrastructure.persistence.jpa.repositories.DoctorAssignmentRepository;
 import com.alpacaflow.meditrackplatform.organization.infrastructure.persistence.jpa.repositories.DoctorRepository;
 import com.alpacaflow.meditrackplatform.organization.infrastructure.persistence.jpa.repositories.OrganizationRepository;
@@ -26,6 +31,8 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
     private final OrganizationRepository organizationRepository;
     private final DoctorRepository doctorRepository;
     private final DoctorAssignmentRepository doctorAssignmentRepository;
+    private final CaregiverRepository caregiverRepository;
+    private final CaregiverAssignmentRepository caregiverAssignmentRepository;
 
     /**
      * Constructor of the class.
@@ -33,15 +40,21 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
      * @param organizationRepository the organization repository to be used by the class.
      * @param doctorRepository the doctor repository to be used by the class.
      * @param doctorAssignmentRepository the doctor assignment repository to be used by the class.
+     * @param caregiverRepository the caregiver repository to be used by the class.
+     * @param caregiverAssignmentRepository the caregiver assignment repository to be used by the class.
      */
     public SeniorCitizenCommandServiceImpl(SeniorCitizenRepository seniorCitizenRepository,
                                           OrganizationRepository organizationRepository,
                                           DoctorRepository doctorRepository,
-                                          DoctorAssignmentRepository doctorAssignmentRepository) {
+                                          DoctorAssignmentRepository doctorAssignmentRepository,
+                                          CaregiverRepository caregiverRepository,
+                                          CaregiverAssignmentRepository caregiverAssignmentRepository) {
         this.seniorCitizenRepository = seniorCitizenRepository;
         this.organizationRepository = organizationRepository;
         this.doctorRepository = doctorRepository;
         this.doctorAssignmentRepository = doctorAssignmentRepository;
+        this.caregiverRepository = caregiverRepository;
+        this.caregiverAssignmentRepository = caregiverAssignmentRepository;
     }
 
     // inherit javadoc
@@ -194,32 +207,69 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
 
     // inherit javadoc
     @Override
+    @Transactional
     public Optional<SeniorCitizen> handle(AssignSeniorCitizenToCaregiverCommand command) {
-        // Validate senior citizen exists
-        if (!seniorCitizenRepository.existsById(command.seniorCitizenId())) {
-            throw new SeniorCitizenNotFoundException(command.seniorCitizenId());
+        var seniorCitizen = seniorCitizenRepository.findById(command.seniorCitizenId())
+                .orElseThrow(() -> new SeniorCitizenNotFoundException(command.seniorCitizenId()));
+        
+        var caregiver = caregiverRepository.findById(command.caregiverId())
+                .orElseThrow(() -> new CaregiverNotFoundException(command.caregiverId()));
+        
+        // Use domain logic to assign (includes validation and exclusión mutua)
+        seniorCitizen.assignToCaregiver(caregiver.getId(), caregiver.getOrganizationId());
+        
+        // Also publish event from caregiver's perspective
+        caregiver.assignToSenior(seniorCitizen.getId(), seniorCitizen.getOrganizationId());
+        
+        try {
+            // Save senior citizen (updates assignedCaregiverId)
+            var savedSeniorCitizen = seniorCitizenRepository.save(seniorCitizen);
+            caregiverRepository.save(caregiver);
+            
+            // Persist in Caregiver_assignments table
+            var existingAssignment = caregiverAssignmentRepository.findBySeniorCitizenId(command.seniorCitizenId());
+            if (existingAssignment.isPresent()) {
+                // Delete existing assignment first (since senior_citizen_id is PK, we need to delete and recreate)
+                caregiverAssignmentRepository.deleteBySeniorCitizenId(command.seniorCitizenId());
+            }
+            // Create new assignment
+            var assignment = new CaregiverAssignment(caregiver, savedSeniorCitizen);
+            caregiverAssignmentRepository.save(assignment);
+            
+            return Optional.of(savedSeniorCitizen);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error while assigning senior citizen to caregiver: %s".formatted(e.getMessage()));
         }
-        
-        // Note: Caregiver repository would be needed here, but for now we'll handle it similarly
-        // The actual caregiver assignment logic would be similar to doctor assignment
-        // This is a placeholder that needs to be implemented when Caregiver is fully implemented
-        
-        throw new UnsupportedOperationException("Caregiver assignment not yet implemented");
     }
 
     // inherit javadoc
     @Override
+    @Transactional
     public Optional<SeniorCitizen> handle(UnassignSeniorCitizenFromCaregiverCommand command) {
-        // Validate senior citizen exists
-        if (!seniorCitizenRepository.existsById(command.seniorCitizenId())) {
-            throw new SeniorCitizenNotFoundException(command.seniorCitizenId());
+        var seniorCitizen = seniorCitizenRepository.findById(command.seniorCitizenId())
+                .orElseThrow(() -> new SeniorCitizenNotFoundException(command.seniorCitizenId()));
+        
+        var caregiver = caregiverRepository.findById(command.caregiverId())
+                .orElseThrow(() -> new CaregiverNotFoundException(command.caregiverId()));
+        
+        // Use domain logic to unassign
+        seniorCitizen.unassignFromCaregiver(caregiver.getId(), caregiver.getOrganizationId());
+        
+        // Also publish event from caregiver's perspective
+        caregiver.unassignFromSenior(seniorCitizen.getId(), seniorCitizen.getOrganizationId());
+        
+        try {
+            // Save senior citizen (updates assignedCaregiverId to null)
+            var savedSeniorCitizen = seniorCitizenRepository.save(seniorCitizen);
+            caregiverRepository.save(caregiver);
+            
+            // Remove from Caregiver_assignments table
+            caregiverAssignmentRepository.deleteBySeniorCitizenId(command.seniorCitizenId());
+            
+            return Optional.of(savedSeniorCitizen);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error while unassigning senior citizen from caregiver: %s".formatted(e.getMessage()));
         }
-        
-        // Note: Caregiver repository would be needed here, but for now we'll handle it similarly
-        // The actual caregiver unassignment logic would be similar to doctor unassignment
-        // This is a placeholder that needs to be implemented when Caregiver is fully implemented
-        
-        throw new UnsupportedOperationException("Caregiver unassignment not yet implemented");
     }
 }
 

@@ -1,5 +1,8 @@
 package com.alpacaflow.meditrackplatform.organization.interfaces.rest;
 
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.DoctorNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -61,6 +64,36 @@ public class GlobalExceptionHandler {
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Internal server error: " + ex.getMessage());
+    }
+
+    /**
+     * Handles DoctorNotFoundException.
+     */
+    @ExceptionHandler(DoctorNotFoundException.class)
+    public ResponseEntity<String> handleDoctorNotFoundException(DoctorNotFoundException ex) {
+        System.out.println("❌ [GlobalExceptionHandler] DoctorNotFoundException: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
+    }
+
+    /**
+     * Handles CaregiverNotFoundException.
+     */
+    @ExceptionHandler(CaregiverNotFoundException.class)
+    public ResponseEntity<String> handleCaregiverNotFoundException(CaregiverNotFoundException ex) {
+        System.out.println("❌ [GlobalExceptionHandler] CaregiverNotFoundException: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
+    }
+
+    /**
+     * Handles SeniorCitizenNotFoundException.
+     */
+    @ExceptionHandler(SeniorCitizenNotFoundException.class)
+    public ResponseEntity<String> handleSeniorCitizenNotFoundException(SeniorCitizenNotFoundException ex) {
+        System.out.println("❌ [GlobalExceptionHandler] SeniorCitizenNotFoundException: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ex.getMessage());
     }
 }
 
