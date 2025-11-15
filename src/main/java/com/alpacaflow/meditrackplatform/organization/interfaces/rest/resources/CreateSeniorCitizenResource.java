@@ -22,8 +22,9 @@ public record CreateSeniorCitizenResource(
      * @throws IllegalArgumentException if any of the required fields is null or blank.
      */
     public CreateSeniorCitizenResource {
-        if (organizationId == null || organizationId <= 0) {
-            throw new IllegalArgumentException("Organization ID is required and must be greater than 0");
+        // Allow organizationId = 0 as special case for relatives (individual users)
+        if (organizationId == null || organizationId < 0) {
+            throw new IllegalArgumentException("Organization ID is required and must be greater than or equal to 0");
         }
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name is required");

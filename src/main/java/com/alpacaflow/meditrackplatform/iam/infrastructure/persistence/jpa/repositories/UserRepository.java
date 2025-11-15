@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     /**
-     * Finds a user by email address
+     * Finds a user by email address (email is used as username for authentication)
      * @param email the email address to search for
      * @return an Optional with a User if found, otherwise an empty Optional
      */

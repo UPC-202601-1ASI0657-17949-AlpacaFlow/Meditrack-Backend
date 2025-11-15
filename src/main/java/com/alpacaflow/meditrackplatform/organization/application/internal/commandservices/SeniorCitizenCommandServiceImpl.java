@@ -61,8 +61,9 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
     @Override
     @Transactional
     public Long handle(CreateSeniorCitizenCommand command) {
-        var organization = organizationRepository.findById(command.organizationId())
-                .orElseThrow(() -> new IllegalArgumentException("Organization with id %d not found".formatted(command.organizationId())));
+        // Handle special case: organizationId = 0 for relatives (individual users)
+        // Create or get a default organization for relatives
+        var organization = getOrCreateDefaultRelativeOrganization(command.organizationId());
         
         var seniorCitizen = new SeniorCitizen(
                 organization,
@@ -84,6 +85,39 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
             return savedSeniorCitizen.getId();
         } catch (Exception e) {
             throw new IllegalArgumentException("Error saving senior citizen: %s".formatted(e.getMessage()));
+        }
+    }
+
+    /**
+     * Gets or creates a default organization for relatives (when organizationId = 0)
+     * @param organizationId the organization ID from the command (0 for relatives)
+     * @return the organization to use
+     */
+    private com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Organization getOrCreateDefaultRelativeOrganization(Long organizationId) {
+        // If organizationId is 0, use a special default organization for relatives
+        if (organizationId == 0) {
+            // Try to find an existing "Individual Users" organization
+            // For now, we'll create one if it doesn't exist
+            // In a production system, this should be created via a migration or initialization script
+            var defaultOrg = organizationRepository.findAll().stream()
+                    .filter(org -> "Individual Users".equals(org.getName()) && "relative".equals(org.getType()))
+                    .findFirst();
+            
+            if (defaultOrg.isPresent()) {
+                return defaultOrg.get();
+            } else {
+                // Create default organization for relatives
+                var newOrg = new com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Organization(
+                        "Individual Users", "relative");
+                var savedOrg = organizationRepository.save(newOrg);
+                savedOrg.publishCreatedEvent();
+                organizationRepository.save(savedOrg);
+                return savedOrg;
+            }
+        } else {
+            // Normal case: find the organization by ID
+            return organizationRepository.findById(organizationId)
+                    .orElseThrow(() -> new IllegalArgumentException("Organization with id %d not found".formatted(organizationId)));
         }
     }
 
