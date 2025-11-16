@@ -51,11 +51,15 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -DskipTests -B
 
+      - name: List built artifacts
+        run: ls -la target/
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: '${{ github.workspace }}/target/*.jar'
+          path: '${{ github.workspace }}/target/meditrack-platform-*.jar'
+          retention-days: 1
 
   deploy:
     permissions:
@@ -71,6 +75,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: java-app
+
+      - name: List downloaded artifacts
+        run: |
+          ls -la
+          file *.jar || echo "No JAR files found"
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
