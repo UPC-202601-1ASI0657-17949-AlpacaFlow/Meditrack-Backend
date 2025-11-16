@@ -22,7 +22,7 @@ public class WebCorsConfiguration {
      * Creates a CORS filter that allows requests from the frontend.
      * <p>
      * This configuration allows:
-     * - Origins: http://localhost:4200 (Angular dev server)
+     * - Origins: Development (localhost:4200) and production domains
      * - Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS
      * - Headers: All headers
      * - Credentials: Allowed
@@ -35,14 +35,25 @@ public class WebCorsConfiguration {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         
-        // Allow requests from Angular development server
-        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        // Allow requests from development and production origins
+        config.setAllowedOriginPatterns(List.of(
+            "http://localhost:4200",
+            "http://localhost:*",
+            "https://*.vercel.app",
+            "https://*.netlify.app",
+            "https://*.azurewebsites.net",
+            "https://*.github.io",
+            "*"  // Allow all origins (for testing - restrict in production)
+        ));
         
         // Allow all HTTP methods
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         
         // Allow all headers
         config.setAllowedHeaders(List.of("*"));
+        
+        // Expose headers that frontend needs to read
+        config.setExposedHeaders(List.of("Authorization", "Content-Type"));
         
         // Allow credentials (cookies, authorization headers, etc.)
         config.setAllowCredentials(true);
