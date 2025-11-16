@@ -49,7 +49,7 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
-        run: mvn -B -Dmaven.test.skip=true -f pom.xml clean install
+        run: mvn clean package -DskipTests -B
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
