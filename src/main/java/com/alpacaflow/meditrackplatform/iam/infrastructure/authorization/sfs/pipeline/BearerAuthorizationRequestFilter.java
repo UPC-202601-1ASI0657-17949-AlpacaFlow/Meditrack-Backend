@@ -31,6 +31,17 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
+            // Skip authentication filter for public endpoints
+            String path = request.getRequestURI();
+            if (path.startsWith("/api/v1/authentication/") || 
+                path.startsWith("/temp-api/") || 
+                path.startsWith("/swagger-") || 
+                path.startsWith("/v3/api-docs")) {
+                LOGGER.info("Skipping authentication for public endpoint: {}", path);
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String token = tokenService.getBearerTokenFrom(request);
             LOGGER.info("Token: {}", token);
             if (token != null && tokenService.validateToken(token)) {
