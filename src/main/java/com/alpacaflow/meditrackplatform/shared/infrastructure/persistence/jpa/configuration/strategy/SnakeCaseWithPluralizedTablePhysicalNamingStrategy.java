@@ -1,4 +1,4 @@
-package com.alpacaflow.meditrackplatform.shared.infrastructure.persistence.jpa.strategy;
+package com.alpacaflow.meditrackplatform.shared.infrastructure.persistence.jpa.configuration.strategy;
 
 import org.hibernate.boot.model.naming.Identifier;
 import org.hibernate.boot.model.naming.PhysicalNamingStrategy;
@@ -6,7 +6,14 @@ import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment;
 
 import static io.github.encryptorcode.pluralize.Pluralize.pluralize;
 
-public class SnakeCasePhysicalNamingStrategy implements PhysicalNamingStrategy {
+/**
+ * Snake Case With Pluralized Table Physical Naming Strategy
+ * @summary
+ * Physical naming strategy that converts names to snake_case and pluralizes table names.
+ */
+public class SnakeCaseWithPluralizedTablePhysicalNamingStrategy implements PhysicalNamingStrategy {
+
+
     @Override
     public Identifier toPhysicalCatalogName(Identifier identifier, JdbcEnvironment jdbcEnvironment) {
         return this.toSnakeCase(identifier);
@@ -32,11 +39,13 @@ public class SnakeCasePhysicalNamingStrategy implements PhysicalNamingStrategy {
         return this.toSnakeCase(identifier);
     }
 
-    private Identifier toSnakeCase(final Identifier identifier) {
-        if (identifier == null) return null;
-        final String regex = "([a-z])([A-Z])";
-        final String replacement = "$1_$2";
-        final String newName = identifier.getText()
+    private Identifier toSnakeCase(Identifier identifier) {
+        if (identifier == null) {
+            return null;
+        }
+        String regex = "([a-z])([A-Z])";
+        String replacement = "$1_$2";
+        String newName = identifier.getText()
                 .replaceAll(regex, replacement)
                 .toLowerCase();
         return Identifier.toIdentifier(newName);
