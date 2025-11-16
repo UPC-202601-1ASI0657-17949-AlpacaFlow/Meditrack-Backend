@@ -23,6 +23,7 @@ env:
   AZURE_WEBAPP_NAME: meditrack-platform-springboot    # set this to the name of your Azure Web App
   JAVA_VERSION: '21'                  # set this to the Java version to use
   DISTRIBUTION: zulu                  # set this to the Java distribution
+  SPRING_PROFILES_ACTIVE: prod
 
 on:
   push:
