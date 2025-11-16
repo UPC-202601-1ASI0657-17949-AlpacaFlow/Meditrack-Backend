@@ -35,21 +35,25 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
             String path = request.getRequestURI();
             if (path.startsWith("/api/v1/authentication/") || 
                 path.startsWith("/temp-api/") || 
-                path.startsWith("/swagger-") || 
-                path.startsWith("/v3/api-docs")) {
-                LOGGER.info("Skipping authentication for public endpoint: {}", path);
+                path.contains("/swagger-") || 
+                path.startsWith("/swagger-ui") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/webjars/") ||
+                path.equals("/error")) {
+                LOGGER.debug("Skipping authentication for public endpoint: {}", path);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String token = tokenService.getBearerTokenFrom(request);
-            LOGGER.info("Token: {}", token);
+            LOGGER.debug("Processing authentication for path: {}", path);
             if (token != null && tokenService.validateToken(token)) {
                 String email = tokenService.getUsernameFromToken(token); // Email is used as username
                 var userDetails = userDetailsService.loadUserByUsername(email);
                 SecurityContextHolder.getContext().setAuthentication(UsernamePasswordAuthenticationTokenBuilder.build(userDetails, request));
+                LOGGER.debug("Authentication successful for user: {}", email);
             } else {
-                LOGGER.info("Token is not valid");
+                LOGGER.debug("No valid token found for path: {}", path);
             }
 
         } catch (Exception e) {

@@ -67,15 +67,16 @@ public class WebSecurityConfiguration {
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers(
                                 "/api/v1/authentication/**",
-                                "/api/v1/authentication/sign-in",
-                                "/api/v1/authentication/sign-up",
                                 "/temp-api/v1/users/**", // Mock endpoints for dev
                                 "/v3/api-docs/**",
-                                "/swagger-ui.html",
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/error").permitAll()
+                                "/configuration/ui",
+                                "/configuration/security",
+                                "/error",
+                                "/favicon.ico").permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(authorizationRequestFilter(), UsernamePasswordAuthenticationFilter.class);
