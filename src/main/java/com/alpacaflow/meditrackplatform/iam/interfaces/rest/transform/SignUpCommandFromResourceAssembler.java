@@ -5,7 +5,15 @@ import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.SignUpReso
 
 public class SignUpCommandFromResourceAssembler {
     public static SignUpCommand toCommandFromResource(SignUpResource resource) {
-        return new SignUpCommand(resource.email(), resource.password(), resource.role());
+        return new SignUpCommand(
+                resource.email(), 
+                resource.password(), 
+                resource.role(),
+                resource.firstName(),
+                resource.lastName(),
+                resource.organizationName(),
+                resource.organizationType()
+        );
     }
 }
 
