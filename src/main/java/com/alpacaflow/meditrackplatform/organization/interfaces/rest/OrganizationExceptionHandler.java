@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
- * Global exception handler for REST controllers.
+ * Organization-specific exception handler for REST controllers.
  * This handler catches exceptions that occur during request processing, including deserialization errors.
  */
 @ControllerAdvice(basePackages = "com.alpacaflow.meditrackplatform.organization.interfaces.rest")
-public class GlobalExceptionHandler {
+public class OrganizationExceptionHandler {
 
     /**
      * Handles HTTP message not readable exceptions (e.g., JSON deserialization failures).
