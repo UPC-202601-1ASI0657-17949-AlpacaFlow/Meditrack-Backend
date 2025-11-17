@@ -10,8 +10,7 @@ import java.util.Date;
 
 @EntityListeners(AuditingEntityListener.class)
 @MappedSuperclass
-public class AuditableModel {
-
+public abstract class AuditableModel {
     @Id
     @Getter
     @GeneratedValue(strategy = GenerationType.IDENTITY)
