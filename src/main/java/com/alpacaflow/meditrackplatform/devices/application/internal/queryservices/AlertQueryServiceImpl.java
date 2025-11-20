@@ -33,5 +33,10 @@ public class AlertQueryServiceImpl implements AlertQueryService {
     public List<Alert> handle(GetAllAlertsQuery query) {
         return alertRepository.findAll();
     }
+
+    @Override
+    public List<Alert> handle(com.alpacaflow.meditrackplatform.devices.domain.model.queries.GetAllAlertsByDeviceIdQuery query) {
+        return alertRepository.findByDeviceId(query.deviceId());
+    }
 }
 
