@@ -1,5 +1,6 @@
 package com.alpacaflow.meditrackplatform.organization.application.internal.commandservices;
 
+import com.alpacaflow.meditrackplatform.organization.application.internal.outboundservices.acl.ExternalDeviceService;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Caregiver;
@@ -33,6 +34,7 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
     private final DoctorAssignmentRepository doctorAssignmentRepository;
     private final CaregiverRepository caregiverRepository;
     private final CaregiverAssignmentRepository caregiverAssignmentRepository;
+    private final ExternalDeviceService externalDeviceService;
 
     /**
      * Constructor of the class.
@@ -42,19 +44,22 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
      * @param doctorAssignmentRepository the doctor assignment repository to be used by the class.
      * @param caregiverRepository the caregiver repository to be used by the class.
      * @param caregiverAssignmentRepository the caregiver assignment repository to be used by the class.
+     * @param externalDeviceService the external device service (ACL) to create devices.
      */
     public SeniorCitizenCommandServiceImpl(SeniorCitizenRepository seniorCitizenRepository,
                                           OrganizationRepository organizationRepository,
                                           DoctorRepository doctorRepository,
                                           DoctorAssignmentRepository doctorAssignmentRepository,
                                           CaregiverRepository caregiverRepository,
-                                          CaregiverAssignmentRepository caregiverAssignmentRepository) {
+                                          CaregiverAssignmentRepository caregiverAssignmentRepository,
+                                          ExternalDeviceService externalDeviceService) {
         this.seniorCitizenRepository = seniorCitizenRepository;
         this.organizationRepository = organizationRepository;
         this.doctorRepository = doctorRepository;
         this.doctorAssignmentRepository = doctorAssignmentRepository;
         this.caregiverRepository = caregiverRepository;
         this.caregiverAssignmentRepository = caregiverAssignmentRepository;
+        this.externalDeviceService = externalDeviceService;
     }
 
     // inherit javadoc
@@ -65,6 +70,7 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
         // Create or get a default organization for relatives
         var organization = getOrCreateDefaultRelativeOrganization(command.organizationId());
         
+        // First save the senior citizen without deviceId to get an ID
         var seniorCitizen = new SeniorCitizen(
                 organization,
                 command.firstName(),
@@ -75,13 +81,41 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
                 command.dni(),
                 command.height(),
                 command.imageUrl(),
-                command.deviceId()
+                null  // Temporarily set to null
         );
         
         try {
             var savedSeniorCitizen = seniorCitizenRepository.save(seniorCitizen);
             savedSeniorCitizen.publishCreatedEvent();
             seniorCitizenRepository.save(savedSeniorCitizen);
+            
+            // Handle device ID logic
+            Long finalDeviceId = command.deviceId();
+            if (finalDeviceId == null || finalDeviceId == 0L) {
+                // Case 1: No deviceId provided - auto-create device
+                var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(savedSeniorCitizen.getId());
+                if (deviceIdOptional.isPresent()) {
+                    finalDeviceId = deviceIdOptional.get();
+                    savedSeniorCitizen.updateDeviceId(finalDeviceId);
+                    seniorCitizenRepository.save(savedSeniorCitizen);
+                }
+            } else {
+                // Case 2: DeviceId provided - validate existence
+                if (externalDeviceService.deviceExists(finalDeviceId)) {
+                    // Device exists - use it
+                    savedSeniorCitizen.updateDeviceId(finalDeviceId);
+                    seniorCitizenRepository.save(savedSeniorCitizen);
+                } else {
+                    // Device doesn't exist - create new one and use its auto-generated ID
+                    var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(savedSeniorCitizen.getId());
+                    if (deviceIdOptional.isPresent()) {
+                        finalDeviceId = deviceIdOptional.get();
+                        savedSeniorCitizen.updateDeviceId(finalDeviceId);
+                        seniorCitizenRepository.save(savedSeniorCitizen);
+                    }
+                }
+            }
+            
             return savedSeniorCitizen.getId();
         } catch (Exception e) {
             throw new IllegalArgumentException("Error saving senior citizen: %s".formatted(e.getMessage()));
