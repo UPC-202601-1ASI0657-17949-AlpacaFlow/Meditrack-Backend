@@ -28,8 +28,14 @@ public class ExternalDeviceService {
      * @return An Optional containing the device ID, or empty if creation failed
      */
     public Optional<Long> createDeviceForSeniorCitizen(String model, Long seniorCitizenId) {
-        var deviceId = devicesContextFacade.createDevice(model, seniorCitizenId);
-        return deviceId == 0L ? Optional.empty() : Optional.of(deviceId);
+        try {
+            var deviceId = devicesContextFacade.createDevice(model, seniorCitizenId);
+            return deviceId == 0L ? Optional.empty() : Optional.of(deviceId);
+        } catch (Exception e) {
+            System.err.println("Error creating device via ACL: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
     }
 
     /**

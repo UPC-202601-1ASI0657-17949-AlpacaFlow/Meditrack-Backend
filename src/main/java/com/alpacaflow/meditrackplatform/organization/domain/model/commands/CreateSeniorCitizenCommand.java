@@ -46,8 +46,9 @@ public record CreateSeniorCitizenCommand(
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("Image URL cannot be null or blank");
         }
-        if (deviceId == null || deviceId <= 0) {
-            throw new IllegalArgumentException("deviceId cannot be null or less than 1");
+        // deviceId can be null (will auto-create device) or must be > 0 if provided
+        if (deviceId != null && deviceId <= 0) {
+            throw new IllegalArgumentException("Device ID must be greater than 0 if provided");
         }
     }
 }

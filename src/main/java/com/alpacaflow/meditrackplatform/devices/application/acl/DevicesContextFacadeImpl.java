@@ -5,6 +5,8 @@ import com.alpacaflow.meditrackplatform.devices.domain.services.DeviceCommandSer
 import com.alpacaflow.meditrackplatform.devices.domain.services.DeviceQueryService;
 import com.alpacaflow.meditrackplatform.devices.interfaces.acl.DevicesContextFacade;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Implementation of DevicesContextFacade
@@ -21,13 +23,12 @@ public class DevicesContextFacadeImpl implements DevicesContextFacade {
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Long createDevice(String model, Long holderId) {
         var createDeviceCommand = new CreateDeviceCommand(model, holderId);
-        try {
-            return deviceCommandService.handle(createDeviceCommand);
-        } catch (Exception e) {
-            return 0L;
-        }
+        // Let exceptions propagate to allow transaction rollback
+        // The caller (ExternalDeviceService) should handle the exception
+        return deviceCommandService.handle(createDeviceCommand);
     }
 
     @Override

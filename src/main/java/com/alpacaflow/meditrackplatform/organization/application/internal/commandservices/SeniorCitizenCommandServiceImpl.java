@@ -70,7 +70,30 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
         // Create or get a default organization for relatives
         var organization = getOrCreateDefaultRelativeOrganization(command.organizationId());
         
-        // First save the senior citizen without deviceId to get an ID
+        // Determine final device ID BEFORE creating senior citizen
+        Long finalDeviceId = command.deviceId();
+        
+        if (finalDeviceId == null || finalDeviceId == 0L) {
+            // Case 1: No deviceId provided - create device with temporary holder ID (0)
+            var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(0L);
+            if (deviceIdOptional.isEmpty()) {
+                throw new IllegalArgumentException("Failed to create device for senior citizen");
+            }
+            finalDeviceId = deviceIdOptional.get();
+        } else {
+            // Case 2: DeviceId provided - validate existence
+            if (!externalDeviceService.deviceExists(finalDeviceId)) {
+                // Device doesn't exist - create new one with temporary holder ID (0)
+                var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(0L);
+                if (deviceIdOptional.isEmpty()) {
+                    throw new IllegalArgumentException("Failed to create device for senior citizen");
+                }
+                finalDeviceId = deviceIdOptional.get();
+            }
+            // If device exists, use it as is
+        }
+        
+        // Now create the senior citizen with the valid device ID
         var seniorCitizen = new SeniorCitizen(
                 organization,
                 command.firstName(),
@@ -81,40 +104,13 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
                 command.dni(),
                 command.height(),
                 command.imageUrl(),
-                null  // Temporarily set to null
+                finalDeviceId
         );
         
         try {
             var savedSeniorCitizen = seniorCitizenRepository.save(seniorCitizen);
             savedSeniorCitizen.publishCreatedEvent();
             seniorCitizenRepository.save(savedSeniorCitizen);
-            
-            // Handle device ID logic
-            Long finalDeviceId = command.deviceId();
-            if (finalDeviceId == null || finalDeviceId == 0L) {
-                // Case 1: No deviceId provided - auto-create device
-                var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(savedSeniorCitizen.getId());
-                if (deviceIdOptional.isPresent()) {
-                    finalDeviceId = deviceIdOptional.get();
-                    savedSeniorCitizen.updateDeviceId(finalDeviceId);
-                    seniorCitizenRepository.save(savedSeniorCitizen);
-                }
-            } else {
-                // Case 2: DeviceId provided - validate existence
-                if (externalDeviceService.deviceExists(finalDeviceId)) {
-                    // Device exists - use it
-                    savedSeniorCitizen.updateDeviceId(finalDeviceId);
-                    seniorCitizenRepository.save(savedSeniorCitizen);
-                } else {
-                    // Device doesn't exist - create new one and use its auto-generated ID
-                    var deviceIdOptional = externalDeviceService.createDeviceForSeniorCitizen(savedSeniorCitizen.getId());
-                    if (deviceIdOptional.isPresent()) {
-                        finalDeviceId = deviceIdOptional.get();
-                        savedSeniorCitizen.updateDeviceId(finalDeviceId);
-                        seniorCitizenRepository.save(savedSeniorCitizen);
-                    }
-                }
-            }
             
             return savedSeniorCitizen.getId();
         } catch (Exception e) {

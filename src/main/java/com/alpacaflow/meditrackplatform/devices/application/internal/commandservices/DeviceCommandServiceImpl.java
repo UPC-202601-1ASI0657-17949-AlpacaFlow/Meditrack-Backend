@@ -31,14 +31,32 @@ public class DeviceCommandServiceImpl implements DeviceCommandService {
         var device = new Device(command);
         
         // Generate 7 demo measurements for each type (some inside, some outside safe ranges)
-        generateDemoMeasurements(device);
+        // Note: We generate measurements AFTER saving the device to ensure we have an ID
+        // But since measurements are part of the aggregate, we need to add them and save again
+        // Or better: generate them but don't trigger events that require ID until after save
+        
+        // Strategy: 
+        // 1. Save device first to get ID
+        // 2. Generate measurements and add to device
+        // 3. Save device again with measurements
         
         try {
-            deviceRepository.save(device);
+            // First save to get ID
+            var savedDevice = deviceRepository.saveAndFlush(device);
+            if (savedDevice.getId() == null) {
+                throw new IllegalStateException("Device ID is null after save");
+            }
+            
+            // Now generate measurements using the saved device (which has ID)
+            generateDemoMeasurements(savedDevice);
+            
+            // Save again with measurements
+            savedDevice = deviceRepository.saveAndFlush(savedDevice);
+            
+            return savedDevice.getId();
         } catch (Exception e) {
-            throw new IllegalArgumentException("Error saving device: %s".formatted(e.getMessage()));
+            throw new IllegalArgumentException("Error saving device: %s".formatted(e.getMessage()), e);
         }
-        return device.getId();
     }
     
     /**

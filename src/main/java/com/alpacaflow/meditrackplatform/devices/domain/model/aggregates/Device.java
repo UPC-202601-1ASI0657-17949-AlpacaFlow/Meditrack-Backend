@@ -32,7 +32,7 @@ public class Device extends AuditableAbstractAggregateRoot<Device> {
     private Holder holder;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "device_id")
+    @JoinColumn(name = "device_id", nullable = false)
     private List<Measurement> measurements;
 
     public Device() {
