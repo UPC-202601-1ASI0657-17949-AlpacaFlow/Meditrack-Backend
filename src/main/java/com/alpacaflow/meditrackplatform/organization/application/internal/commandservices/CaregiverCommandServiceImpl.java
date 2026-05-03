@@ -1,6 +1,7 @@
 package com.alpacaflow.meditrackplatform.organization.application.internal.commandservices;
 
 import com.alpacaflow.meditrackplatform.iam.domain.services.UserCommandService;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Caregiver;
 import com.alpacaflow.meditrackplatform.organization.domain.model.commands.*;
@@ -42,7 +43,14 @@ public class CaregiverCommandServiceImpl implements CaregiverCommandService {
     public Long handle(CreateCaregiverCommand command) {
         var organization = organizationRepository.findById(command.organizationId())
                 .orElseThrow(() -> new IllegalArgumentException("Organization with id %d not found".formatted(command.organizationId())));
-        
+
+        assertNoDuplicateCaregiverInOrganization(
+                command.organizationId(),
+                command.email(),
+                command.firstName(),
+                command.lastName(),
+                null);
+
         final Long userId;
         
         // If userId is not provided, create User automatically with role "caregiver"
@@ -107,6 +115,14 @@ public class CaregiverCommandServiceImpl implements CaregiverCommandService {
         }
         
         var caregiverToUpdate = result.get();
+        var organizationId = caregiverToUpdate.getOrganization().getId();
+        assertNoDuplicateCaregiverInOrganization(
+                organizationId,
+                command.email(),
+                command.firstName(),
+                command.lastName(),
+                command.caregiverId());
+
         try {
             var updatedCaregiver = caregiverToUpdate.updatePersonalInformation(
                     command.firstName(),
@@ -178,6 +194,47 @@ public class CaregiverCommandServiceImpl implements CaregiverCommandService {
             return Optional.of(caregiver);
         } catch (Exception e) {
             throw new IllegalArgumentException("Error while unassigning senior citizen from caregiver: %s".formatted(e.getMessage()));
+        }
+    }
+
+    /**
+     * Ensures no other caregiver in the same organization shares the same email (case-insensitive)
+     * or the same full name (first + last, case-insensitive).
+     *
+     * @param excludeCaregiverId when not null, that caregiver row is ignored (for updates)
+     */
+    private void assertNoDuplicateCaregiverInOrganization(
+            Long organizationId,
+            String email,
+            String firstName,
+            String lastName,
+            Long excludeCaregiverId) {
+        var normalizedEmail = email == null ? "" : email.trim();
+        var normalizedFirst = firstName == null ? "" : firstName.trim();
+        var normalizedLast = lastName == null ? "" : lastName.trim();
+
+        boolean duplicateEmail;
+        boolean duplicateFullName;
+        if (excludeCaregiverId == null) {
+            duplicateEmail = caregiverRepository.existsByOrganization_IdAndEmailIgnoreCase(organizationId, normalizedEmail);
+            duplicateFullName = caregiverRepository.existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCase(
+                    organizationId, normalizedFirst, normalizedLast);
+        } else {
+            duplicateEmail = caregiverRepository.existsByOrganization_IdAndEmailIgnoreCaseAndIdNot(
+                    organizationId, normalizedEmail, excludeCaregiverId);
+            duplicateFullName = caregiverRepository.existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndIdNot(
+                    organizationId, normalizedFirst, normalizedLast, excludeCaregiverId);
+        }
+
+        if (duplicateEmail) {
+            throw new CaregiverDuplicateRegistrationException(
+                    CaregiverDuplicateRegistrationException.CODE_DUPLICATE_EMAIL,
+                    "Another caregiver in this organization already uses this email.");
+        }
+        if (duplicateFullName) {
+            throw new CaregiverDuplicateRegistrationException(
+                    CaregiverDuplicateRegistrationException.CODE_DUPLICATE_FULL_NAME,
+                    "Another caregiver in this organization already has this full name.");
         }
     }
 }

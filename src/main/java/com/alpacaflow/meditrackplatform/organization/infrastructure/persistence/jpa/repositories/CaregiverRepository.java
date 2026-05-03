@@ -43,5 +43,15 @@ public interface CaregiverRepository extends JpaRepository<Caregiver, Long> {
      * @return An optional with a caregiver object if found, otherwise an empty optional.
      */
     Optional<Caregiver> findByUserIdAndOrganization_Id(Long userId, Long organizationId);
+
+    boolean existsByOrganization_IdAndEmailIgnoreCase(Long organizationId, String email);
+
+    boolean existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCase(
+            Long organizationId, String firstName, String lastName);
+
+    boolean existsByOrganization_IdAndEmailIgnoreCaseAndIdNot(Long organizationId, String email, Long id);
+
+    boolean existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndIdNot(
+            Long organizationId, String firstName, String lastName, Long id);
 }
 

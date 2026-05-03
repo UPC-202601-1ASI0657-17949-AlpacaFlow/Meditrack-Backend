@@ -1,6 +1,7 @@
 package com.alpacaflow.meditrackplatform.organization.interfaces.rest.transform;
 
 import com.alpacaflow.meditrackplatform.organization.domain.model.commands.UpdateSeniorCitizenCommand;
+import com.alpacaflow.meditrackplatform.organization.domain.validation.SeniorCitizenPersonalDataValidation;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.UpdateSeniorCitizenResource;
 
 /**
@@ -20,9 +21,9 @@ public class UpdateSeniorCitizenCommandFromResourceAssembler {
                 resource.firstName(),
                 resource.lastName(),
                 resource.birthDate(),
-                resource.gender(),
+                SeniorCitizenPersonalDataValidation.normalizeGender(resource.gender()),
                 resource.weight(),
-                resource.dni(),
+                resource.dni().trim(),
                 resource.height(),
                 resource.imageUrl(),
                 resource.deviceId()

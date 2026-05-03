@@ -36,13 +36,6 @@ public class DeviceQueryServiceImpl implements DeviceQueryService {
     }
 
     @Override
-    public List<BloodPressureMeasurement> handle(GetAllBloodPressureMeasurementsByDeviceIdQuery query) {
-        var device = deviceRepository.findById(query.deviceId())
-                .orElseThrow(() -> new DeviceNotFoundException(query.deviceId()));
-        return device.getBloodPressureMeasurements();
-    }
-
-    @Override
     public List<HeartRateMeasurement> handle(GetAllHeartRateMeasurementsByDeviceIdQuery query) {
         var device = deviceRepository.findById(query.deviceId())
                 .orElseThrow(() -> new DeviceNotFoundException(query.deviceId()));

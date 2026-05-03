@@ -1,7 +1,9 @@
 package com.alpacaflow.meditrackplatform.shared.interfaces.rest;
 
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.OrganizationDuplicateNameException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -20,6 +22,11 @@ public class GlobalExceptionHandler {
                 HttpStatusCode.valueOf(HttpStatus.BAD_REQUEST.value()),
                 message
         );
+    }
+
+    @ExceptionHandler(OrganizationDuplicateNameException.class)
+    public ResponseEntity<String> handleOrganizationDuplicateName(OrganizationDuplicateNameException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getCode());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

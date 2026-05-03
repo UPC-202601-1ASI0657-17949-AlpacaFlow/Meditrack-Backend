@@ -1,5 +1,7 @@
 package com.alpacaflow.meditrackplatform.organization.domain.model.commands;
 
+import com.alpacaflow.meditrackplatform.organization.domain.validation.SeniorCitizenPersonalDataValidation;
+
 import java.util.Date;
 
 /**
@@ -34,15 +36,16 @@ public record CreateSeniorCitizenCommand(
         if (gender == null || gender.isBlank()) {
             throw new IllegalArgumentException("Gender cannot be null or blank");
         }
-        if (weight == null || weight <= 0) {
-            throw new IllegalArgumentException("Weight cannot be null or less than or equal to 0");
+        if (weight == null) {
+            throw new IllegalArgumentException("Weight cannot be null");
         }
         if (dni == null || dni.isBlank()) {
             throw new IllegalArgumentException("DNI cannot be null or blank");
         }
-        if (height == null || height <= 0) {
-            throw new IllegalArgumentException("Height cannot be null or less than or equal to 0");
+        if (height == null) {
+            throw new IllegalArgumentException("Height cannot be null");
         }
+        SeniorCitizenPersonalDataValidation.validatePersonalData(birthDate, gender, weight, height, dni);
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("Image URL cannot be null or blank");
         }

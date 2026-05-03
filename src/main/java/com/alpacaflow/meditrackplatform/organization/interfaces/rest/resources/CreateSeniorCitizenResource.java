@@ -1,5 +1,7 @@
 package com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources;
 
+import com.alpacaflow.meditrackplatform.organization.domain.validation.SeniorCitizenPersonalDataValidation;
+
 import java.util.Date;
 
 /**
@@ -38,15 +40,16 @@ public record CreateSeniorCitizenResource(
         if (gender == null || gender.isBlank()) {
             throw new IllegalArgumentException("Gender is required");
         }
-        if (weight == null || weight <= 0) {
-            throw new IllegalArgumentException("Weight is required and must be greater than 0");
+        if (weight == null) {
+            throw new IllegalArgumentException("Weight is required");
         }
         if (dni == null || dni.isBlank()) {
             throw new IllegalArgumentException("DNI is required");
         }
-        if (height == null || height <= 0) {
-            throw new IllegalArgumentException("Height is required and must be greater than 0");
+        if (height == null) {
+            throw new IllegalArgumentException("Height is required");
         }
+        SeniorCitizenPersonalDataValidation.validatePersonalData(birthDate, gender, weight, height, dni);
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("Image URL is required");
         }

@@ -1,7 +1,11 @@
 package com.alpacaflow.meditrackplatform.organization.interfaces.rest;
 
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.OrganizationDuplicateNameException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.DoctorDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.DoctorNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +26,10 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<String> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] Failed to deserialize request body: " + ex.getMessage());
-        System.out.println("❌ [GlobalExceptionHandler] Root cause: " + (ex.getRootCause() != null ? ex.getRootCause().getMessage() : "N/A"));
+        System.out.println(" [GlobalExceptionHandler] Failed to deserialize request body: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] Root cause: " + (ex.getRootCause() != null ? ex.getRootCause().getMessage() : "N/A"));
         if (ex.getRootCause() != null) {
-            System.out.println("❌ [GlobalExceptionHandler] Root cause class: " + ex.getRootCause().getClass().getName());
+            System.out.println(" [GlobalExceptionHandler] Root cause class: " + ex.getRootCause().getClass().getName());
             ex.getRootCause().printStackTrace();
         }
         ex.printStackTrace();
@@ -34,14 +38,53 @@ public class OrganizationExceptionHandler {
     }
 
     /**
+     * Organization name already registered (case-insensitive).
+     */
+    @ExceptionHandler(OrganizationDuplicateNameException.class)
+    public ResponseEntity<String> handleOrganizationDuplicateNameException(OrganizationDuplicateNameException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ex.getCode());
+    }
+
+    /**
      * Handles IllegalArgumentException that might be thrown during record construction or validation.
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgumentException(IllegalArgumentException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] IllegalArgumentException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] IllegalArgumentException: " + ex.getMessage());
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body("Invalid request: " + ex.getMessage());
+    }
+
+    /**
+     * Doctor duplicate email or full name within the same organization (admin registration).
+     */
+    @ExceptionHandler(DoctorDuplicateRegistrationException.class)
+    public ResponseEntity<String> handleDoctorDuplicateRegistrationException(DoctorDuplicateRegistrationException ex) {
+        System.out.println(" [OrganizationExceptionHandler] DoctorDuplicateRegistrationException: " + ex.getCode());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ex.getCode());
+    }
+
+    /**
+     * Caregiver duplicate email or full name within the same organization (admin registration).
+     */
+    @ExceptionHandler(CaregiverDuplicateRegistrationException.class)
+    public ResponseEntity<String> handleCaregiverDuplicateRegistrationException(CaregiverDuplicateRegistrationException ex) {
+        System.out.println(" [OrganizationExceptionHandler] CaregiverDuplicateRegistrationException: " + ex.getCode());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ex.getCode());
+    }
+
+    /**
+     * Senior citizen duplicate full name or DNI within the same organization.
+     */
+    @ExceptionHandler(SeniorCitizenDuplicateRegistrationException.class)
+    public ResponseEntity<String> handleSeniorCitizenDuplicateRegistrationException(SeniorCitizenDuplicateRegistrationException ex) {
+        System.out.println(" [OrganizationExceptionHandler] SeniorCitizenDuplicateRegistrationException: " + ex.getCode());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ex.getCode());
     }
 
     /**
@@ -49,7 +92,7 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<String> handleIllegalStateException(IllegalStateException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] IllegalStateException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] IllegalStateException: " + ex.getMessage());
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body("Invalid state: " + ex.getMessage());
@@ -60,7 +103,7 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] RuntimeException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] RuntimeException: " + ex.getMessage());
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("Internal server error: " + ex.getMessage());
@@ -71,7 +114,7 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(DoctorNotFoundException.class)
     public ResponseEntity<String> handleDoctorNotFoundException(DoctorNotFoundException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] DoctorNotFoundException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] DoctorNotFoundException: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ex.getMessage());
     }
@@ -81,7 +124,7 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(CaregiverNotFoundException.class)
     public ResponseEntity<String> handleCaregiverNotFoundException(CaregiverNotFoundException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] CaregiverNotFoundException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] CaregiverNotFoundException: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ex.getMessage());
     }
@@ -91,7 +134,7 @@ public class OrganizationExceptionHandler {
      */
     @ExceptionHandler(SeniorCitizenNotFoundException.class)
     public ResponseEntity<String> handleSeniorCitizenNotFoundException(SeniorCitizenNotFoundException ex) {
-        System.out.println("❌ [GlobalExceptionHandler] SeniorCitizenNotFoundException: " + ex.getMessage());
+        System.out.println(" [GlobalExceptionHandler] SeniorCitizenNotFoundException: " + ex.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(ex.getMessage());
     }

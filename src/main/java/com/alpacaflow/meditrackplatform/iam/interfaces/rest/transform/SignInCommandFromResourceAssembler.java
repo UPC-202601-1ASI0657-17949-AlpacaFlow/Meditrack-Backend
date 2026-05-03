@@ -5,7 +5,9 @@ import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.SignInReso
 
 public class SignInCommandFromResourceAssembler {
     public static SignInCommand toCommandFromResource(SignInResource signInResource) {
-        return new SignInCommand(signInResource.email(), signInResource.password());
+        var email = signInResource.email() != null ? signInResource.email() : "";
+        var password = signInResource.password() != null ? signInResource.password() : "";
+        return new SignInCommand(email, password);
     }
 }
 

@@ -74,7 +74,6 @@ public class Alert extends AuditableAbstractAggregateRoot<Alert> {
             case "TEMPERATURE" -> String.format("High temperature recorded: %.2f°C", dataRegistered);
             case "HEARTRATE", "HEART_RATE" -> String.format("Abnormal heart rate recorded: %.0f bpm", dataRegistered);
             case "OXYGEN" -> String.format("Low oxygen saturation recorded: %.0f%%", dataRegistered);
-            case "BLOODPRESSURE", "BLOOD_PRESSURE" -> String.format("Abnormal blood pressure recorded: %.0f mmHg", dataRegistered);
             default -> "Unknown measurement type";
         };
     }

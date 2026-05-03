@@ -2,6 +2,7 @@ package com.alpacaflow.meditrackplatform.organization.application.internal.comma
 
 import com.alpacaflow.meditrackplatform.organization.application.internal.outboundservices.acl.ExternalDeviceService;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.CaregiverNotFoundException;
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Caregiver;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.SeniorCitizen;
@@ -69,6 +70,13 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
         // Handle special case: organizationId = 0 for relatives (individual users)
         // Create or get a default organization for relatives
         var organization = getOrCreateDefaultRelativeOrganization(command.organizationId());
+
+        assertNoDuplicateSeniorCitizenInOrganization(
+                organization.getId(),
+                command.firstName(),
+                command.lastName(),
+                command.dni(),
+                null);
         
         // Determine final device ID BEFORE creating senior citizen
         Long finalDeviceId = command.deviceId();
@@ -92,7 +100,11 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
             }
             // If device exists, use it as is
         }
-        
+
+        if (command.deviceId() != null && command.deviceId() > 0 && finalDeviceId.equals(command.deviceId())) {
+            assertDeviceNotLinkedToAnotherSenior(finalDeviceId, null);
+        }
+
         // Now create the senior citizen with the valid device ID
         var seniorCitizen = new SeniorCitizen(
                 organization,
@@ -161,6 +173,12 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
         }
         
         var seniorCitizenToUpdate = result.get();
+        assertNoDuplicateSeniorCitizenInOrganization(
+                seniorCitizenToUpdate.getOrganizationId(),
+                command.firstName(),
+                command.lastName(),
+                command.dni(),
+                command.seniorCitizenId());
         try {
             var updatedSeniorCitizen = seniorCitizenToUpdate.updatePersonalInformation(
                     command.firstName(),
@@ -174,11 +192,14 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
             );
             
             if (!command.deviceId().equals(seniorCitizenToUpdate.getDeviceId())) {
+                assertDeviceNotLinkedToAnotherSenior(command.deviceId(), command.seniorCitizenId());
                 updatedSeniorCitizen.updateDeviceId(command.deviceId());
             }
             
             var savedSeniorCitizen = seniorCitizenRepository.save(updatedSeniorCitizen);
             return Optional.of(savedSeniorCitizen);
+        } catch (SeniorCitizenDuplicateRegistrationException e) {
+            throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("Error while updating senior citizen: %s".formatted(e.getMessage()));
         }
@@ -333,6 +354,67 @@ public class SeniorCitizenCommandServiceImpl implements SeniorCitizenCommandServ
             return Optional.of(savedSeniorCitizen);
         } catch (Exception e) {
             throw new IllegalArgumentException("Error while unassigning senior citizen from caregiver: %s".formatted(e.getMessage()));
+        }
+    }
+
+    /**
+     * Ensures no other senior citizen in the same organization shares the same DNI or the same full name
+     * (first + last, case-insensitive).
+     *
+     * @param excludeSeniorCitizenId when not null, that row is ignored (for updates)
+     */
+    /**
+     * Ensures the device is not already assigned to another senior citizen (device_id is globally unique).
+     *
+     * @param deviceId                device to link
+     * @param excludeSeniorCitizenId when updating, the senior being edited (may keep same device); null on create
+     */
+    private void assertDeviceNotLinkedToAnotherSenior(Long deviceId, Long excludeSeniorCitizenId) {
+        if (deviceId == null || deviceId <= 0) {
+            return;
+        }
+        boolean taken = excludeSeniorCitizenId == null
+                ? seniorCitizenRepository.existsByDeviceId(deviceId)
+                : seniorCitizenRepository.existsByDeviceIdAndIdNot(deviceId, excludeSeniorCitizenId);
+        if (taken) {
+            throw new SeniorCitizenDuplicateRegistrationException(
+                    SeniorCitizenDuplicateRegistrationException.CODE_DEVICE_ALREADY_ASSIGNED,
+                    "Device %d is already assigned to another senior citizen".formatted(deviceId));
+        }
+    }
+
+    private void assertNoDuplicateSeniorCitizenInOrganization(
+            Long organizationId,
+            String firstName,
+            String lastName,
+            String dni,
+            Long excludeSeniorCitizenId) {
+        var normalizedFirst = firstName == null ? "" : firstName.trim();
+        var normalizedLast = lastName == null ? "" : lastName.trim();
+        var normalizedDni = dni == null ? "" : dni.trim();
+
+        boolean duplicateDni;
+        boolean duplicateFullName;
+        if (excludeSeniorCitizenId == null) {
+            duplicateDni = seniorCitizenRepository.existsByOrganization_IdAndDni(organizationId, normalizedDni);
+            duplicateFullName = seniorCitizenRepository.existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCase(
+                    organizationId, normalizedFirst, normalizedLast);
+        } else {
+            duplicateDni = seniorCitizenRepository.existsByOrganization_IdAndDniAndIdNot(
+                    organizationId, normalizedDni, excludeSeniorCitizenId);
+            duplicateFullName = seniorCitizenRepository.existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndIdNot(
+                    organizationId, normalizedFirst, normalizedLast, excludeSeniorCitizenId);
+        }
+
+        if (duplicateDni) {
+            throw new SeniorCitizenDuplicateRegistrationException(
+                    SeniorCitizenDuplicateRegistrationException.CODE_DUPLICATE_DNI,
+                    "Another senior citizen in this organization already has this DNI.");
+        }
+        if (duplicateFullName) {
+            throw new SeniorCitizenDuplicateRegistrationException(
+                    SeniorCitizenDuplicateRegistrationException.CODE_DUPLICATE_FULL_NAME,
+                    "Another senior citizen in this organization already has this full name.");
         }
     }
 }

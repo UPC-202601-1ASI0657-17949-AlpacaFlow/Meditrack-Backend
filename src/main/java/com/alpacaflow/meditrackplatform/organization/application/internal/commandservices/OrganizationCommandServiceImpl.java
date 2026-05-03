@@ -1,5 +1,6 @@
 package com.alpacaflow.meditrackplatform.organization.application.internal.commandservices;
 
+import com.alpacaflow.meditrackplatform.organization.domain.exceptions.OrganizationDuplicateNameException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.OrganizationNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.model.aggregates.Organization;
 import com.alpacaflow.meditrackplatform.organization.domain.model.commands.*;
@@ -30,7 +31,14 @@ public class OrganizationCommandServiceImpl implements OrganizationCommandServic
     // inherit javadoc
     @Override
     public Long handle(CreateOrganizationCommand command) {
-        var organization = new Organization(command.name(), command.type());
+        var name = command.name().trim();
+        var type = command.type().trim();
+        if (organizationRepository.existsByNameIgnoreCase(name)) {
+            throw new OrganizationDuplicateNameException(
+                    OrganizationDuplicateNameException.CODE_DUPLICATE_NAME,
+                    "An organization with this name is already registered");
+        }
+        var organization = new Organization(name, type);
         
         try {
             var savedOrganization = organizationRepository.save(organization);
@@ -51,11 +59,14 @@ public class OrganizationCommandServiceImpl implements OrganizationCommandServic
         }
         
         var organizationToUpdate = result.get();
+        var name = command.name().trim();
+        if (organizationRepository.existsByNameIgnoreCaseAndIdNot(name, command.organizationId())) {
+            throw new OrganizationDuplicateNameException(
+                    OrganizationDuplicateNameException.CODE_DUPLICATE_NAME,
+                    "An organization with this name is already registered");
+        }
         try {
-            var updatedOrganization = organizationToUpdate.updateInformation(
-                    command.name(),
-                    command.type()
-            );
+            var updatedOrganization = organizationToUpdate.updateInformation(name, command.type());
             
             var savedOrganization = organizationRepository.save(updatedOrganization);
             return Optional.of(savedOrganization);

@@ -1,6 +1,8 @@
 package com.alpacaflow.meditrackplatform.iam.interfaces.rest;
 
 import com.alpacaflow.meditrackplatform.iam.domain.services.UserCommandService;
+import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.OrganizationNameAvailabilityResource;
+import com.alpacaflow.meditrackplatform.organization.domain.services.OrganizationQueryService;
 import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.AuthenticatedUserResource;
 import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.SignInResource;
 import com.alpacaflow.meditrackplatform.iam.interfaces.rest.resources.SignUpResource;
@@ -16,9 +18,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -26,9 +30,26 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Authentication", description = "Available Authentication Endpoints")
 public class AuthenticationController {
     private final UserCommandService userCommandService;
+    private final OrganizationQueryService organizationQueryService;
 
-    public AuthenticationController(UserCommandService userCommandService) {
+    public AuthenticationController(
+            UserCommandService userCommandService,
+            OrganizationQueryService organizationQueryService) {
         this.userCommandService = userCommandService;
+        this.organizationQueryService = organizationQueryService;
+    }
+
+    /**
+     * Public check used during admin (clinic/residence) registration: whether an organization name is still free.
+     */
+    @GetMapping("/organization-name-availability")
+    @Operation(summary = "Organization name availability", description = "Returns whether the proposed organization name is available (case-insensitive).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Availability returned.")})
+    public ResponseEntity<OrganizationNameAvailabilityResource> organizationNameAvailability(
+            @RequestParam(value = "name", required = false) String name) {
+        var available = organizationQueryService.isOrganizationNameAvailable(name);
+        return ResponseEntity.ok(new OrganizationNameAvailabilityResource(available));
     }
 
     @PostMapping("/sign-in")

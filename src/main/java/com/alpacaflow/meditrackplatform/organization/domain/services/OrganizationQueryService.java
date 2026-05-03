@@ -27,5 +27,13 @@ public interface OrganizationQueryService {
      * @see GetAllOrganizationsQuery
      */
     List<Organization> handle(GetAllOrganizationsQuery query);
+
+    /**
+     * Returns whether the given organization name is still available (not yet registered), ignoring case.
+     *
+     * @param name proposed name (may be null or blank; treated as available for pre-validation)
+     * @return true if the name can be used, false if another organization already uses it (same name ignoring case)
+     */
+    boolean isOrganizationNameAvailable(String name);
 }
 

@@ -10,5 +10,9 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
+
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }
 

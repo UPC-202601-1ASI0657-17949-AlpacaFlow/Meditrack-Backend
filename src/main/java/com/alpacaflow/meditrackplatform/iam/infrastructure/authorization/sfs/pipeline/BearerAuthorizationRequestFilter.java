@@ -31,15 +31,24 @@ public class BearerAuthorizationRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain) throws ServletException, IOException {
         try {
-            // Skip authentication filter for public endpoints
+            // Skip authentication filter for public endpoints (strip servlet context path if present)
             String path = request.getRequestURI();
-            if (path.startsWith("/api/v1/authentication/") || 
-                path.startsWith("/temp-api/") || 
-                path.contains("/swagger-") || 
-                path.startsWith("/swagger-ui") ||
-                path.startsWith("/v3/api-docs") ||
-                path.startsWith("/webjars/") ||
-                path.equals("/error")) {
+            String contextPath = request.getContextPath();
+            if (contextPath != null && !contextPath.isEmpty() && path.startsWith(contextPath)) {
+                path = path.substring(contextPath.length());
+                if (path.isEmpty()) {
+                    path = "/";
+                }
+            }
+            boolean publicAuth = path.startsWith("/api/v1/authentication/")
+                    || path.contains("/api/v1/authentication/");
+            if (publicAuth
+                || path.startsWith("/temp-api/")
+                || path.contains("/swagger-")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/webjars/")
+                || path.equals("/error")) {
                 LOGGER.debug("Skipping authentication for public endpoint: {}", path);
                 filterChain.doFilter(request, response);
                 return;

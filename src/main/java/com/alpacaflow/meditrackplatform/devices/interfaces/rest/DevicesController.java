@@ -95,31 +95,6 @@ public class DevicesController {
     }
 
     /**
-     * Add a blood pressure measurement to a device
-     * @param deviceId The device id
-     * @param resource The {@link AddBloodPressureMeasurementToDeviceResource} instance
-     * @return The {@link DeviceResource} resource for the updated device
-     */
-    @PostMapping("/{deviceId}/measurements/blood-pressure")
-    @Operation(summary = "Add a blood pressure measurement to a device",
-               description = "Add a blood pressure measurement to a device")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Measurement added"),
-            @ApiResponse(responseCode = "400", description = "Invalid input"),
-            @ApiResponse(responseCode = "404", description = "Device not found")})
-    public ResponseEntity<DeviceResource> addBloodPressureMeasurementToDevice(
-            @PathVariable Long deviceId,
-            @RequestBody AddBloodPressureMeasurementToDeviceResource resource) {
-        var command = AddBloodPressureMeasurementToDeviceCommandFromResourceAssembler
-                .toCommandFromResource(resource, deviceId);
-        var device = deviceCommandService.handle(command);
-        if (device.isEmpty()) return ResponseEntity.badRequest().build();
-        var deviceEntity = device.get();
-        var deviceResource = DeviceResourceFromEntityAssembler.toResourceFromEntity(deviceEntity);
-        return new ResponseEntity<>(deviceResource, HttpStatus.CREATED);
-    }
-
-    /**
      * Add a heart rate measurement to a device
      * @param deviceId The device id
      * @param resource The {@link AddHeartRateMeasurementToDeviceResource} instance
@@ -192,27 +167,6 @@ public class DevicesController {
         var deviceEntity = device.get();
         var deviceResource = DeviceResourceFromEntityAssembler.toResourceFromEntity(deviceEntity);
         return new ResponseEntity<>(deviceResource, HttpStatus.CREATED);
-    }
-
-    /**
-     * Get all blood pressure measurements by device id
-     * @param deviceId The device id
-     * @return The list of {@link BloodPressureMeasurementResource} resources
-     */
-    @GetMapping("/{deviceId}/measurements/blood-pressure")
-    @Operation(summary = "Get all blood pressure measurements by device id",
-               description = "Get all blood pressure measurements by device id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Measurements found"),
-            @ApiResponse(responseCode = "404", description = "Device not found")})
-    public ResponseEntity<List<BloodPressureMeasurementResource>> getAllBloodPressureMeasurementsByDeviceId(
-            @PathVariable Long deviceId) {
-        var query = new GetAllBloodPressureMeasurementsByDeviceIdQuery(deviceId);
-        var measurements = deviceQueryService.handle(query);
-        var measurementResources = measurements.stream()
-                .map(BloodPressureMeasurementResourceFromEntityAssembler::toResourceFromEntity)
-                .toList();
-        return ResponseEntity.ok(measurementResources);
     }
 
     /**

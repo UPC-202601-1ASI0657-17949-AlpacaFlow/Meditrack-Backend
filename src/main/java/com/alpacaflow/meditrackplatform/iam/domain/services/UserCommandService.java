@@ -48,5 +48,15 @@ public interface UserCommandService {
      * @return An Optional with the user if found, otherwise an empty Optional
      */
     Optional<User> getUserByEmail(String email);
+
+    /**
+     * For staff created with {@link CreateMockUserCommand} (doctor/caregiver): if the IAM email differs from the
+     * canonical institution email (e.g. after profile edits or legacy data), updates {@code users.email} and
+     * resets the mock password hash to match the canonical email so sign-in works.
+     *
+     * @param userId           IAM user linked to the doctor/caregiver row
+     * @param canonicalEmail   {@code trim().toLowerCase(Locale.ROOT)}
+     */
+    void alignMockStaffUserWithCanonicalEmail(Long userId, String canonicalEmail);
 }
 

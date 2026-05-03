@@ -38,5 +38,13 @@ public class OrganizationQueryServiceImpl implements OrganizationQueryService {
     public List<Organization> handle(GetAllOrganizationsQuery query) {
         return organizationRepository.findAll();
     }
+
+    @Override
+    public boolean isOrganizationNameAvailable(String name) {
+        if (name == null || name.isBlank()) {
+            return true;
+        }
+        return !organizationRepository.existsByNameIgnoreCase(name.trim());
+    }
 }
 

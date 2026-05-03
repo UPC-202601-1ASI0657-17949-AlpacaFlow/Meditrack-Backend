@@ -1,5 +1,7 @@
 package com.alpacaflow.meditrackplatform.organization.domain.model.commands;
 
+import com.alpacaflow.meditrackplatform.organization.domain.model.CaregiverInputRules;
+
 /**
  * Command to create a new caregiver.
  */
@@ -24,15 +26,11 @@ public record CreateCaregiverCommand(
         if (lastName == null || lastName.isBlank()) {
             throw new IllegalArgumentException("Last name cannot be null or blank");
         }
-        if (age == null || age <= 0) {
-            throw new IllegalArgumentException("Age cannot be null or less than 1");
-        }
+        CaregiverInputRules.assertCaregiverAge(age);
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("Email cannot be null or blank");
         }
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            throw new IllegalArgumentException("Phone number cannot be null or blank");
-        }
+        CaregiverInputRules.assertCaregiverPhoneDigitsOnly(phoneNumber);
         if (imageUrl == null || imageUrl.isBlank()) {
             throw new IllegalArgumentException("Image URL cannot be null or blank");
         }

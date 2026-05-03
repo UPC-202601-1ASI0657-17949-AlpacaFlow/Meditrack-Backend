@@ -91,16 +91,6 @@ public class Device extends AuditableAbstractAggregateRoot<Device> {
     }
 
     /**
-     * Add a blood pressure measurement to the device
-     * @param diastolic The diastolic pressure
-     * @param systolic The systolic pressure
-     */
-    public void addBloodPressure(int diastolic, int systolic) {
-        var measurement = new BloodPressureMeasurement(diastolic, systolic);
-        this.measurements.add(measurement);
-    }
-
-    /**
      * Get measurements of a specific type
      * @param type The class type of the measurement
      * @return List of measurements of the specified type
@@ -134,14 +124,6 @@ public class Device extends AuditableAbstractAggregateRoot<Device> {
      */
     public List<OxygenMeasurement> getOxygenMeasurements() {
         return getMeasurementsOfType(OxygenMeasurement.class);
-    }
-
-    /**
-     * Get blood pressure measurements
-     * @return List of blood pressure measurements
-     */
-    public List<BloodPressureMeasurement> getBloodPressureMeasurements() {
-        return getMeasurementsOfType(BloodPressureMeasurement.class);
     }
 
     /**

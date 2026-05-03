@@ -19,14 +19,6 @@ public interface DeviceCommandService {
     Long handle(CreateDeviceCommand command);
 
     /**
-     * Handle an add blood pressure measurement to device command
-     * @param command The command containing the measurement data
-     * @return The updated device
-     * @see AddBloodPressureMeasurementToDeviceCommand
-     */
-    Optional<Device> handle(AddBloodPressureMeasurementToDeviceCommand command);
-
-    /**
      * Handle an add heart rate measurement to device command
      * @param command The command containing the measurement data
      * @return The updated device

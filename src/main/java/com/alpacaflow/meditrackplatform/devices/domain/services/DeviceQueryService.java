@@ -29,14 +29,6 @@ public interface DeviceQueryService {
     List<Device> handle(GetAllDevicesQuery query);
 
     /**
-     * Handle a get all blood pressure measurements by device id query
-     * @param query The query containing the device id
-     * @return List of blood pressure measurements
-     * @see GetAllBloodPressureMeasurementsByDeviceIdQuery
-     */
-    List<BloodPressureMeasurement> handle(GetAllBloodPressureMeasurementsByDeviceIdQuery query);
-
-    /**
      * Handle a get all heart rate measurements by device id query
      * @param query The query containing the device id
      * @return List of heart rate measurements

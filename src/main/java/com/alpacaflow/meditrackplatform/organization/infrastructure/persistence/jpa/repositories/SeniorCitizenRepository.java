@@ -34,5 +34,19 @@ public interface SeniorCitizenRepository extends JpaRepository<SeniorCitizen, Lo
      * @return A list of senior citizens assigned to the doctor.
      */
     List<SeniorCitizen> findByAssignedDoctorId(Long doctorId);
+
+    boolean existsByOrganization_IdAndDni(Long organizationId, String dni);
+
+    boolean existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCase(
+            Long organizationId, String firstName, String lastName);
+
+    boolean existsByOrganization_IdAndDniAndIdNot(Long organizationId, String dni, Long id);
+
+    boolean existsByOrganization_IdAndFirstNameIgnoreCaseAndLastNameIgnoreCaseAndIdNot(
+            Long organizationId, String firstName, String lastName, Long id);
+
+    boolean existsByDeviceId(Long deviceId);
+
+    boolean existsByDeviceIdAndIdNot(Long deviceId, Long id);
 }
 
