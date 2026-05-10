@@ -8,9 +8,12 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 /**
  * Spring configuration that exposes an OpenAPI description for the application.
@@ -52,6 +55,10 @@ public class OpenApiConfiguration {
         // General configuration
 
         var openApi = new OpenAPI();
+        // Relative server so Swagger UI calls the same scheme/host as the page (fixes
+        // mixed-content blocks when deployed behind HTTPS proxies like Cloud Run).
+        openApi.servers(List.of(new Server().url("/")));
+
         openApi
                 .info(new Info()
                         .title(this.applicationName)
