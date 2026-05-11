@@ -9,5 +9,4 @@ class MeditrackPlatformApplicationTests {
     @Test
     void contextLoads() {
     }
-
 }
