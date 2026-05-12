@@ -2,12 +2,18 @@ package com.alpacaflow.meditrackplatform.organization.interfaces.rest;
 
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetAllSeniorCitizensByOrganizationIdQuery;
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetAllSeniorCitizensQuery;
+import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetClinicalBackgroundBySeniorCitizenIdQuery;
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetSeniorCitizenByIdQuery;
+import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundCommandService;
+import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundQueryService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.SeniorCitizenCommandService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.SeniorCitizenQueryService;
+import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.ClinicalBackgroundResource;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.CreateSeniorCitizenResource;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.SeniorCitizenResource;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.UpdateSeniorCitizenResource;
+import com.alpacaflow.meditrackplatform.organization.interfaces.rest.resources.UpsertClinicalBackgroundResource;
+import com.alpacaflow.meditrackplatform.organization.interfaces.rest.transform.ClinicalBackgroundAssembler;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.transform.CreateSeniorCitizenCommandFromResourceAssembler;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.transform.SeniorCitizenResourceFromEntityAssembler;
 import com.alpacaflow.meditrackplatform.organization.interfaces.rest.transform.UpdateSeniorCitizenCommandFromResourceAssembler;
@@ -15,8 +21,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +40,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 public class SeniorCitizensController {
     private final SeniorCitizenCommandService seniorCitizenCommandService;
     private final SeniorCitizenQueryService seniorCitizenQueryService;
+    private final ClinicalBackgroundQueryService clinicalBackgroundQueryService;
+    private final ClinicalBackgroundCommandService clinicalBackgroundCommandService;
 
     /**
      * Instantiates a new {@link SeniorCitizensController} instance.
@@ -39,9 +49,16 @@ public class SeniorCitizensController {
      * @param seniorCitizenCommandService The {@link SeniorCitizenCommandService} instance
      * @param seniorCitizenQueryService   The {@link SeniorCitizenQueryService} instance
      */
-    public SeniorCitizensController(SeniorCitizenCommandService seniorCitizenCommandService, SeniorCitizenQueryService seniorCitizenQueryService) {
+    public SeniorCitizensController(
+            SeniorCitizenCommandService seniorCitizenCommandService,
+            SeniorCitizenQueryService seniorCitizenQueryService,
+            ClinicalBackgroundQueryService clinicalBackgroundQueryService,
+            ClinicalBackgroundCommandService clinicalBackgroundCommandService
+    ) {
         this.seniorCitizenCommandService = seniorCitizenCommandService;
         this.seniorCitizenQueryService = seniorCitizenQueryService;
+        this.clinicalBackgroundQueryService = clinicalBackgroundQueryService;
+        this.clinicalBackgroundCommandService = clinicalBackgroundCommandService;
     }
 
     /**
@@ -85,6 +102,47 @@ public class SeniorCitizensController {
         if (seniorCitizen.isEmpty()) return ResponseEntity.notFound().build();
         var seniorCitizenResource = SeniorCitizenResourceFromEntityAssembler.toResourceFromEntity(seniorCitizen.get());
         return ResponseEntity.ok(seniorCitizenResource);
+    }
+
+    /**
+     * Get descriptive clinical background for a senior citizen (informational only; not used for IoT alerts).
+     */
+    @GetMapping("/{seniorCitizenId}/clinical-background")
+    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','CAREGIVER')")
+    @Operation(summary = "Get clinical background", description = "Administrative / family-visible clinical notes. Empty defaults if not yet created.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payload returned"),
+            @ApiResponse(responseCode = "404", description = "Senior citizen not found")})
+    public ResponseEntity<ClinicalBackgroundResource> getClinicalBackground(@PathVariable Long seniorCitizenId) {
+        var senior = seniorCitizenQueryService.handle(new GetSeniorCitizenByIdQuery(seniorCitizenId));
+        if (senior.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        var clinical = clinicalBackgroundQueryService.handle(new GetClinicalBackgroundBySeniorCitizenIdQuery(seniorCitizenId));
+        var resource = clinical.map(ClinicalBackgroundAssembler::toResource)
+                .orElseGet(() -> ClinicalBackgroundAssembler.emptyShell(seniorCitizenId));
+        return ResponseEntity.ok(resource);
+    }
+
+    /**
+     * Create or update clinical background (Organization actor; set authorRole to ORGANIZATION).
+     */
+    @PutMapping(value = "/{seniorCitizenId}/clinical-background", consumes = APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Upsert clinical background", description = "Does not affect Monitoring thresholds or alerts.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Saved"),
+            @ApiResponse(responseCode = "404", description = "Senior citizen not found")})
+    public ResponseEntity<ClinicalBackgroundResource> upsertClinicalBackground(
+            @PathVariable Long seniorCitizenId,
+            @RequestBody @Valid UpsertClinicalBackgroundResource resource
+    ) {
+        var command = ClinicalBackgroundAssembler.toCommand(seniorCitizenId, resource);
+        clinicalBackgroundCommandService.handle(command);
+        var clinical = clinicalBackgroundQueryService.handle(new GetClinicalBackgroundBySeniorCitizenIdQuery(seniorCitizenId));
+        return clinical.map(ClinicalBackgroundAssembler::toResource)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     /**
