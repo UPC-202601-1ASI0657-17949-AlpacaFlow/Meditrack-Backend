@@ -7,6 +7,7 @@ import com.alpacaflow.meditrackplatform.organization.domain.exceptions.DoctorDup
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.DoctorNotFoundException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenDuplicateRegistrationException;
 import com.alpacaflow.meditrackplatform.organization.domain.exceptions.SeniorCitizenNotFoundException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -96,6 +97,16 @@ public class OrganizationExceptionHandler {
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body("Invalid state: " + ex.getMessage());
+    }
+
+    /**
+     * Maps method-security denials (e.g. @PreAuthorize) to 403 instead of generic 500.
+     */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<String> handleAuthorizationDeniedException(AuthorizationDeniedException ex) {
+        System.out.println(" [OrganizationExceptionHandler] AuthorizationDeniedException: " + ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body("Access denied");
     }
 
     /**

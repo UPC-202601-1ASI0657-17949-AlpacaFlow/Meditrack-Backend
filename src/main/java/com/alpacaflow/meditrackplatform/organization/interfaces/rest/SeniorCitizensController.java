@@ -109,7 +109,7 @@ public class SeniorCitizensController {
      * Get descriptive clinical background for a senior citizen (informational only; not used for IoT alerts).
      */
     @GetMapping("/{seniorCitizenId}/clinical-background")
-    @PreAuthorize("hasAnyRole('ADMIN','DOCTOR','CAREGIVER')")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMIN-CASA-REPOSO','ADMIN-CLINICA','ADMIN-CLINIC','DOCTOR','CAREGIVER')")
     @Operation(summary = "Get clinical background", description = "Administrative / family-visible clinical notes. Empty defaults if not yet created.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Payload returned"),
@@ -129,7 +129,7 @@ public class SeniorCitizensController {
      * Create or update clinical background (Organization actor; set authorRole to ORGANIZATION).
      */
     @PutMapping(value = "/{seniorCitizenId}/clinical-background", consumes = APPLICATION_JSON_VALUE)
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','ADMIN-CASA-REPOSO','ADMIN-CLINICA','ADMIN-CLINIC')")
     @Operation(summary = "Upsert clinical background", description = "Does not affect Monitoring thresholds or alerts.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Saved"),
