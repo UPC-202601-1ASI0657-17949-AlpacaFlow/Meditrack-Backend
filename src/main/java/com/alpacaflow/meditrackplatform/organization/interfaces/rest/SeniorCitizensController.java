@@ -4,6 +4,7 @@ import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetAll
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetAllSeniorCitizensQuery;
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetClinicalBackgroundBySeniorCitizenIdQuery;
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetSeniorCitizenByIdQuery;
+import com.alpacaflow.meditrackplatform.organization.domain.model.valueobjects.ClinicalBackgroundAuthorRole;
 import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundCommandService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundQueryService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.SeniorCitizenCommandService;
@@ -137,7 +138,21 @@ public class SeniorCitizensController {
             @PathVariable Long seniorCitizenId,
             @RequestBody @Valid UpsertClinicalBackgroundResource resource
     ) {
-        var command = ClinicalBackgroundAssembler.toCommand(seniorCitizenId, resource);
+        // Organization channel always persists ORGANIZATION as author role (defensive against stale frontend payloads).
+        var normalizedResource = new UpsertClinicalBackgroundResource(
+                resource.hypertension(),
+                resource.diabetes(),
+                resource.cardiovascularDisease(),
+                resource.respiratoryDisease(),
+                resource.allergies(),
+                resource.medications(),
+                resource.mobilityNotes(),
+                resource.cognitiveCondition(),
+                resource.generalNotes(),
+                ClinicalBackgroundAuthorRole.ORGANIZATION,
+                resource.authorId()
+        );
+        var command = ClinicalBackgroundAssembler.toCommand(seniorCitizenId, normalizedResource);
         clinicalBackgroundCommandService.handle(command);
         var clinical = clinicalBackgroundQueryService.handle(new GetClinicalBackgroundBySeniorCitizenIdQuery(seniorCitizenId));
         return clinical.map(ClinicalBackgroundAssembler::toResource)

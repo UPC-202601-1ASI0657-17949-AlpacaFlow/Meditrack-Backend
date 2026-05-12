@@ -2,6 +2,7 @@ package com.alpacaflow.meditrackplatform.relatives.interfaces.rest;
 
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetClinicalBackgroundBySeniorCitizenIdQuery;
 import com.alpacaflow.meditrackplatform.organization.domain.model.queries.GetSeniorCitizenByIdQuery;
+import com.alpacaflow.meditrackplatform.organization.domain.model.valueobjects.ClinicalBackgroundAuthorRole;
 import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundCommandService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.ClinicalBackgroundQueryService;
 import com.alpacaflow.meditrackplatform.organization.domain.services.SeniorCitizenQueryService;
@@ -72,7 +73,21 @@ public class RelativeClinicalBackgroundController {
             @PathVariable Long organizationSeniorCitizenId,
             @RequestBody @Valid UpsertClinicalBackgroundResource resource
     ) {
-        var command = ClinicalBackgroundAssembler.toCommand(organizationSeniorCitizenId, resource);
+        // Relative channel always persists RELATIVE as author role (defensive against stale frontend payloads).
+        var normalizedResource = new UpsertClinicalBackgroundResource(
+                resource.hypertension(),
+                resource.diabetes(),
+                resource.cardiovascularDisease(),
+                resource.respiratoryDisease(),
+                resource.allergies(),
+                resource.medications(),
+                resource.mobilityNotes(),
+                resource.cognitiveCondition(),
+                resource.generalNotes(),
+                ClinicalBackgroundAuthorRole.RELATIVE,
+                resource.authorId()
+        );
+        var command = ClinicalBackgroundAssembler.toCommand(organizationSeniorCitizenId, normalizedResource);
         clinicalBackgroundCommandService.handle(command);
         var clinical = clinicalBackgroundQueryService.handle(new GetClinicalBackgroundBySeniorCitizenIdQuery(organizationSeniorCitizenId));
         return clinical.map(ClinicalBackgroundAssembler::toResource)
