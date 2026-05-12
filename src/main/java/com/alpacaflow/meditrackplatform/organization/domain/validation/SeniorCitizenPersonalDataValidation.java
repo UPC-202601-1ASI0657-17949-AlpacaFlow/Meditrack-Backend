@@ -2,6 +2,7 @@ package com.alpacaflow.meditrackplatform.organization.domain.validation;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
@@ -38,20 +39,32 @@ public final class SeniorCitizenPersonalDataValidation {
     }
 
     /**
-     * Canonical stored values: {@code Masculino} or {@code Femenino}.
+     * Normalizes API / UI gender strings to canonical Spanish values stored in the domain.
+     * Accepts Spanish ({@code Masculino}, {@code Femenino}, {@code Otro}) or English ({@code male},
+     * {@code female}, {@code other}), case-insensitive.
+     *
+     * @return one of {@code Masculino}, {@code Femenino}, {@code Otro}
      */
     public static String normalizeGender(String gender) {
         if (gender == null) {
             throw new IllegalArgumentException("Gender is required");
         }
         String g = gender.trim();
-        if (g.equalsIgnoreCase("Masculino")) {
+        if (g.isEmpty()) {
+            throw new IllegalArgumentException("Gender is required");
+        }
+        String lower = g.toLowerCase(Locale.ROOT);
+        if (lower.equals("masculino") || lower.equals("male")) {
             return "Masculino";
         }
-        if (g.equalsIgnoreCase("Femenino")) {
+        if (lower.equals("femenino") || lower.equals("female")) {
             return "Femenino";
         }
-        throw new IllegalArgumentException("Gender must be Masculino or Femenino");
+        if (lower.equals("otro") || lower.equals("other")) {
+            return "Otro";
+        }
+        throw new IllegalArgumentException(
+                "Gender must be Masculino, Femenino, or Otro (or male, female, other)");
     }
 
     public static void validatePersonalData(Date birthDate, String gender, Double weight, Double height, String dni) {

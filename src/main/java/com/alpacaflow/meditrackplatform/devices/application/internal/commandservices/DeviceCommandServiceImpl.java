@@ -5,7 +5,10 @@ import com.alpacaflow.meditrackplatform.devices.domain.model.aggregates.Device;
 import com.alpacaflow.meditrackplatform.devices.domain.model.commands.*;
 import com.alpacaflow.meditrackplatform.devices.domain.model.entities.*;
 import com.alpacaflow.meditrackplatform.devices.domain.model.events.AlertCreatedEvent;
+import com.alpacaflow.meditrackplatform.devices.domain.model.valueobjects.EMeasurementType;
 import com.alpacaflow.meditrackplatform.devices.domain.services.DeviceCommandService;
+import com.alpacaflow.meditrackplatform.devices.domain.services.PatientVitalBaselineLookup;
+import com.alpacaflow.meditrackplatform.devices.domain.services.TelemetrySignalEvaluator;
 import com.alpacaflow.meditrackplatform.devices.infrastructure.persistence.jpa.repositories.DeviceRepository;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +23,17 @@ import java.util.Optional;
 @Service
 public class DeviceCommandServiceImpl implements DeviceCommandService {
     private final DeviceRepository deviceRepository;
+    private final PatientVitalBaselineLookup vitalBaselineLookup;
+    private final TelemetrySignalEvaluator telemetrySignalEvaluator;
 
-    public DeviceCommandServiceImpl(DeviceRepository deviceRepository) {
+    public DeviceCommandServiceImpl(
+            DeviceRepository deviceRepository,
+            PatientVitalBaselineLookup vitalBaselineLookup,
+            TelemetrySignalEvaluator telemetrySignalEvaluator
+    ) {
         this.deviceRepository = deviceRepository;
+        this.vitalBaselineLookup = vitalBaselineLookup;
+        this.telemetrySignalEvaluator = telemetrySignalEvaluator;
     }
 
     @Override
@@ -51,10 +62,10 @@ public class DeviceCommandServiceImpl implements DeviceCommandService {
             device.removeLastMeasurementOfType(HeartRateMeasurement.class);
         }
 
-        var measurement = new HeartRateMeasurement(command.bpm());
-
-        if (measurement.surpassesThreshold()) {
-            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.bpm(), measurement.getType().toString()));
+        var baseline = vitalBaselineLookup.resolveForDevice(device.getId());
+        var outcome = telemetrySignalEvaluator.assess(EMeasurementType.HEART_RATE, command.bpm(), baseline);
+        if (outcome.triggersAlert()) {
+            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.bpm(), outcome.measurementType().toString()));
         }
 
         device.addHeartRate(command.bpm());
@@ -80,10 +91,10 @@ public class DeviceCommandServiceImpl implements DeviceCommandService {
             device.removeLastMeasurementOfType(TemperatureMeasurement.class);
         }
 
-        var measurement = new TemperatureMeasurement(command.celsius());
-
-        if (measurement.surpassesThreshold()) {
-            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.celsius(), measurement.getType().toString()));
+        var baseline = vitalBaselineLookup.resolveForDevice(device.getId());
+        var outcome = telemetrySignalEvaluator.assess(EMeasurementType.TEMPERATURE, command.celsius(), baseline);
+        if (outcome.triggersAlert()) {
+            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.celsius(), outcome.measurementType().toString()));
         }
 
         device.addTemperature(command.celsius());
@@ -109,10 +120,10 @@ public class DeviceCommandServiceImpl implements DeviceCommandService {
             device.removeLastMeasurementOfType(OxygenMeasurement.class);
         }
 
-        var measurement = new OxygenMeasurement(command.spo2());
-
-        if (measurement.surpassesThreshold()) {
-            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.spo2(), measurement.getType().toString()));
+        var baseline = vitalBaselineLookup.resolveForDevice(device.getId());
+        var outcome = telemetrySignalEvaluator.assess(EMeasurementType.OXYGEN, command.spo2(), baseline);
+        if (outcome.triggersAlert()) {
+            device.addDomainEvent(new AlertCreatedEvent(device.getId(), command.spo2(), outcome.measurementType().toString()));
         }
 
         device.addOxygen(command.spo2());
