@@ -46,6 +46,16 @@ public class PatientThresholdCommandServiceImpl implements PatientThresholdComma
         var oxygen = new OxygenThreshold(command.minSpo2());
         var temperature = new TemperatureThreshold(command.minCelsius(), command.maxCelsius());
 
+        if(patientThreshold.isHeartRateAbnormal(command.minBpm()) && patientThreshold.isHeartRateAbnormal(command.maxBpm())){
+            throw new IllegalArgumentException("Umbrales no permitidos para pulsaciones");
+        }
+        if(!(patientThreshold.isOxygenAbnormal(command.minSpo2()))){
+            throw new IllegalArgumentException("Umbral no permitido para SPO2 (oxigenación)");
+        }
+        if(patientThreshold.isTemperatureAbnormal(command.minCelsius()) && patientThreshold.isTemperatureAbnormal(command.maxCelsius())){
+            throw new IllegalArgumentException("Umbrales no permitidos para temperatura");
+        }
+
         patientThreshold.updateThresholds(heartRate, oxygen, temperature);
         thresholdRepository.save(patientThreshold);
 

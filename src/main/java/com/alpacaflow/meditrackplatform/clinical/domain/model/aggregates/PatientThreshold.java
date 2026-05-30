@@ -13,7 +13,7 @@ import lombok.Getter;
 public class PatientThreshold extends AuditableAbstractAggregateRoot<PatientThreshold> {
 
     @Column(nullable = false, unique = true)
-    private Long seniorCitizenId; // ID del Adulto Mayor (proviene del contexto organization)
+    private Long seniorCitizenId;
 
     @Embedded
     private HeartRateThreshold heartRateThreshold;
@@ -24,7 +24,12 @@ public class PatientThreshold extends AuditableAbstractAggregateRoot<PatientThre
     @Embedded
     private TemperatureThreshold temperatureThreshold;
 
-    public PatientThreshold() {}
+    public PatientThreshold() {
+        this.seniorCitizenId = null;
+        this.heartRateThreshold = null;
+        this.oxygenThreshold = null;
+        this.temperatureThreshold = null;
+    }
 
     // Constructor para inicializar con umbrales personalizados o por defecto
     public PatientThreshold(Long seniorCitizenId) {
